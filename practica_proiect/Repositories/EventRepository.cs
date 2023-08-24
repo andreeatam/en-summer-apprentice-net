@@ -5,19 +5,21 @@ namespace practica_proiect.Repositories
 {
     public class EventRepository : IEventRepository
     {
-        private readonly PracticaDbContext _dbContext;
+        private readonly NewDbPracticaContext _dbContext;
 
         public EventRepository()
         {
-            _dbContext = new PracticaDbContext();
+            _dbContext = new NewDbPracticaContext();
         }
 
-        public async Task<IEnumerable<Event>> GetAll()
+        public IEnumerable<Event> GetAll()
         {
             var events = _dbContext.Events
                 .Include(e => e.EventType)
-                .Include(e => e.Venue);
+                .Include(e => e.Venue)
+                .Include(e => e.TicketCategories);
             return events;
+
         }
 
         public async Task<Event> GetById(int id)
@@ -30,21 +32,29 @@ namespace practica_proiect.Repositories
             return @event;
         }
 
+        public async Task Add(Event @event)
+        {
+            _dbContext.Events.Add(@event);
+            await _dbContext.SaveChangesAsync();
+        }
         public async Task Update(Event @event)
         {
             _dbContext.Entry(@event).State = EntityState.Modified;
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
 
-        public async Task Delete(Event @event)
+        public async Task Delete(int id)
         {
-            _dbContext.Remove(@event);
-            _dbContext.SaveChanges();
+            _dbContext.Remove(id);
+            await _dbContext.SaveChangesAsync();
         }
 
-        public int Add(Event @event)
+        public async Task<int> GetEventIdByEventName(string eventName)
         {
-            throw new NotImplementedException();
+            var ev = await _dbContext.Events
+                .Where(e => e.Name == eventName)
+                .FirstOrDefaultAsync();
+            return ev.EventId;
         }
 
     }

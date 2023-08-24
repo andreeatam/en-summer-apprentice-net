@@ -13,8 +13,26 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddTransient<IEventRepository, EventRepository>();
+builder.Services.AddTransient<IOrderRepository,OrderRepository>();
+builder.Services.AddTransient<ITicketCategoryRepository, TicketCategoryRepository>();
+builder.Services.AddTransient<IUserRepository, UserRepository>();
+
 //builder.Services.AddSingleton<ITestService, TestService>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+//Claudiu
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(
+                      policy =>
+                      {
+                          policy.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+
+                      });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -25,6 +43,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+//Claudiu
+app.UseCors();
 
 app.UseAuthorization();
 

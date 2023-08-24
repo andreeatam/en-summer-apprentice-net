@@ -1,4 +1,4 @@
-﻿namespace practica_proiect.Models.Dto
+﻿namespace practica_proiect.Models.Patch
 {
     public class EventPatchDto
     {

@@ -4,15 +4,15 @@ namespace practica_proiect.Repositories
 {
     public interface IEventRepository
     {
-        Task<IEnumerable<Event>> GetAll();
-
+        IEnumerable<Event> GetAll();
         Task<Event> GetById(int id);
-
+        Task Add(Event @event);
         Task Update(Event @event);
+        Task Delete(int id);
 
-        Task Delete(Event @event);
 
-        int Add(Event @event);
+        Task<int> GetEventIdByEventName(string eventName);
+
 
     }
 }

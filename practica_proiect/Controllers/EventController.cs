@@ -6,65 +6,55 @@ using Microsoft.IdentityModel.Tokens;
 using practica_proiect.Models.Dto;
 using practica_proiect.Models;
 using practica_proiect.Repositories;
-
+using Microsoft.AspNetCore.Cors;
+using practica_proiect.Models.Patch;
 
 namespace TMS.Api.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [EnableCors]
     public class EventController : ControllerBase
     {
         private readonly IEventRepository _eventRepository;
         private readonly IMapper _mapper;
+        private readonly ILogger _logger;
 
-        public EventController(IEventRepository eventRepository, IMapper mapper)
+        public EventController(IEventRepository eventRepository, IMapper mapper, ILogger<EventController> logger)
         {
             _eventRepository = eventRepository;
             _mapper = mapper;
+            _logger = logger;
         }
 
 
         [HttpGet]
-        public async Task<ActionResult<List<EventDto>>> GetAll()
+        public ActionResult<List<Event>> GetAllEvents()
         {
-            var events = await _eventRepository.GetAll();
+            var events = _eventRepository.GetAll();
             if (events == null)
             {
                 return NotFound();
             }
 
-            /*var dtoEvents = events.Select(e => new EventDto()
-            {
-                EventId = e.EventId,
-                EventDescription = e.Description,
-                EventName = e.Name,
-                EventType = e.EventType?.Name ?? string.Empty,
-                Venue = e.Venue?.Location ?? string.Empty
-            });*/
-
-           var dtoEvents = _mapper.Map<List<EventDto>>(events);
+            var dtoEvents = _mapper.Map<List<EventDto>>(events);
 
             return Ok(dtoEvents);
         }
 
 
         [HttpGet]
-        public async Task<ActionResult<EventDto>> GetById(int id)
+        public async Task<ActionResult<Event>> GetEventsById(int id)
         {
-            var @event = await _eventRepository.GetById(id);
-
-            if (@event == null)
-            {
-                return NotFound();
-            }
-
-            var eventDto = _mapper.Map<EventDto>(@event);
+            Event ev = await _eventRepository.GetById(id);
+            var eventDto = _mapper.Map<EventDto>(ev);
 
             return Ok(eventDto);
         }
 
+
         [HttpPatch]
-        public async Task<ActionResult<EventPatchDto>> Patch(EventPatchDto eventPatch)
+        public async Task<ActionResult<EventPatchDto>> PatchEvent(EventPatchDto eventPatch)
         {
             var eventEntity = await _eventRepository.GetById(eventPatch.EventId);
             if (eventEntity == null)
@@ -72,28 +62,36 @@ namespace TMS.Api.Controllers
                 return NotFound();
             }
 
-            if (!eventPatch.EventName.IsNullOrEmpty()) 
-                eventEntity.Name = eventPatch.EventName;
-            if (!eventPatch.EventDescription.IsNullOrEmpty()) 
-                eventEntity.Description = eventPatch.EventDescription;
+            eventEntity.Name = eventPatch.EventName;
+            eventEntity.EventId = eventPatch.EventId;
+            eventEntity.Description = eventPatch.EventDescription;
+
             await _eventRepository.Update(eventEntity);
-           
-            var dToEvent=_mapper.Map<EventDto>(eventEntity);
-            return Ok(eventEntity);
+
+            //var dToEvent=_mapper.Map<EventDto>(eventEntity);
+            //return Ok(eventEntity);
+
+            return NoContent();
         }
 
 
         [HttpDelete]
-        public async Task<ActionResult<EventPatchDto>> Delete(int id)
+        public async Task<ActionResult> DeleteEvent(int id)
         {
             var eventEntity = await _eventRepository.GetById(id);
-            if (eventEntity == null)
-            {
-                return NotFound();
-            }
-
-            await _eventRepository.Delete(eventEntity);
+            await _eventRepository.Delete(id);
             return NoContent();
+        }
+
+
+        [HttpPost]
+        public async Task<ActionResult<Event>> AddEvent(EventAddDto eventAddDTO)
+        {
+            var ev = _mapper.Map<Event>(eventAddDTO);
+
+            await _eventRepository.Add(ev);
+
+            return Ok(ev);
         }
     }
 }

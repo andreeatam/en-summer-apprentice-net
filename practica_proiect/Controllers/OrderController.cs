@@ -1,84 +1,99 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using practica_proiect.Models;
 using practica_proiect.Models.Dto;
+using practica_proiect.Models.Patch;
 using practica_proiect.Repositories;
 
 namespace practica_proiect.Controllers
 {
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    [EnableCors]
     public class OrderController : ControllerBase
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IMapper _mapper;
+        private readonly ITicketCategoryRepository _ticketCategoryRepository;
+  
 
-        public OrderController(IOrderRepository orderRepository, IMapper mapper)
+        public OrderController(IOrderRepository orderRepository, IMapper mapper, ITicketCategoryRepository ticketCategoryRepository)
         {
             _orderRepository= orderRepository;
             _mapper = mapper;
+            _ticketCategoryRepository = ticketCategoryRepository;
         }
 
 
 
         [HttpGet]
-        public async Task<ActionResult<List<OrderDto>>> GetAllOrders()
+        public ActionResult<List<Order>> GetAllOrders()
         {
-            var orders = await _orderRepository.GetAll();
+            var orders = _orderRepository.GetAll();
 
-            /*var dtoOrders = orders.Select(e => new OrderDto()
-            {
-                OrderId = e.OrderId,
-                eventName = e.TicketCategory?.Event?.EventName ?? string.Empty,
-                OrderedAt = e.OrderedAt,
-                NumberOfTickets = e.NumberOfTickets,
-                TicketCategory = e.TicketCategory?.Description ?? string.Empty,
-                TotalPrice = e.TotalPrice,
-            });*/
             var dtoOrders = _mapper.Map<List<OrderDto>>(orders);
             return Ok(dtoOrders);
         }
 
-        [HttpGet]
-        public async Task<ActionResult<OrderDto>> GetOrderById(int id)
-        {
-            Order order = await _orderRepository.GetById(id);
 
-            /*OrderDto dtoOrder = new OrderDto()
-            {
-                OrderId = order.OrderId,
-                eventName = order.TicketCategory?.Event?.EventName ?? string.Empty,
-                OrderedAt = order.OrderedAt,
-                NumberOfTickets = order.NumberOfTickets,
-                TicketCategory = order.TicketCategory?.Description ?? string.Empty,
-                TotalPrice = order.TotalPrice
-            };*/
-            var dtoOrder = _mapper.Map<OrderDto>(order);
+        [HttpGet]
+        public async Task<ActionResult<Order>> GetOrderById(int id)
+        {
+            var ord = await _orderRepository.GetById(id);
+
+            var dtoOrder = _mapper.Map<OrderDto>(ord);
             return Ok(dtoOrder);
         }
 
 
         [HttpPatch]
-        public async Task<ActionResult<OrderPatchDto>> Patch(OrderPatchDto orderPatch)
+        public async Task<ActionResult> PatchOrder(OrderPatchDto orderPatch)
         {
-            var orderEntity = await _orderRepository.GetById(orderPatch.OrderId);
+            Order orderEntity = await _orderRepository.GetById(orderPatch.EventId);
            
+            orderEntity.TicketCategory.EventId = orderPatch.EventId;
             orderEntity.TicketCategoryId = orderPatch.TicketCategoryId;
             orderEntity.NumberOfTickets = orderPatch.NumberOfTickets;
-            orderEntity.TotalPrice = orderEntity.NumberOfTickets * orderEntity.TicketCategory.Price;
             
-            _orderRepository.Update(orderEntity);
-            var dtoOrder = _mapper.Map<OrderDto>(orderEntity);
-            return Ok(dtoOrder);
+            await _orderRepository.Update(orderEntity);
+          
+            return Ok(orderEntity);
         }
 
 
         [HttpDelete]
-        public async Task<ActionResult<EventPatchDto>> Delete(int id)
+        public async Task<ActionResult> DeleteOrder(int id)
         {
             var orderEntity = await _orderRepository.GetById(id);
 
-            _orderRepository.Delete(orderEntity);
+            await _orderRepository.Delete(orderEntity);
 
             return NoContent();
+        }
+        
+        [HttpPost]
+        public async Task<ActionResult<OrderAddDto>> AddOrder(OrderAddDto orderAddDto)
+        {
+            TicketCategory ticketCategory = await _ticketCategoryRepository.GetById(orderAddDto.ticketCategoryId);
+
+            if(ticketCategory == null)
+            {
+                return NotFound();
+            }
+
+            float totalPrice = (float)(orderAddDto.numberOfTickets * ticketCategory.Price);
+
+            if(totalPrice == null)
+            {
+                return NotFound();
+            }
+            
+            var or = _mapper.Map<Order>(orderAddDto);
+            or.TotalPrice= totalPrice;
+            await _orderRepository.Add(or);
+
+            return Ok(or);
         }
     }
 }
